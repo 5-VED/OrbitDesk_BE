@@ -54,5 +54,23 @@ module.exports = {
         } catch (error) {
             next(error);
         }
-    }
+    },
+
+    metrics: async (req, res, next) => {
+        try {
+            const result = await SlaPolicyService.getMetrics(req.user.organization_id);
+            res.status(HTTP_CODES.OK).json(result);
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    dashboardStats: async (req, res, next) => {
+        try {
+            const result = await SlaPolicyService.getDashboardStats(req.user.organization_id);
+            res.status(HTTP_CODES.OK).json(result);
+        } catch (error) {
+            next(error);
+        }
+    },
 };

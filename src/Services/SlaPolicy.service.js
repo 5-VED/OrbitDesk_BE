@@ -1,4 +1,5 @@
 const SlaPolicyRepository = require('../Repository/SlaPolicy.repository');
+const TicketRepository = require('../Repository/Ticket.repository');
 const messages = require('../Constants/messages');
 const { HTTP_CODES } = require('../Constants/enums');
 
@@ -120,7 +121,7 @@ const ticketMatchesPolicy = (ticket, policy) => {
 };
 
 const calculateSlaTargets = async (ticket) => {
-    const policies = await SlaPolicyRepository.findAll({ is_deleted: false }, { position: 1 });
+    const policies = await SlaPolicyRepository.findAll({ is_deleted: false, is_active: { $ne: false } }, { position: 1 });
 
     let appliedPolicy = null;
     for (const policy of policies) {
@@ -171,6 +172,85 @@ const calculateSlaTargets = async (ticket) => {
     };
 };
 
+const getMetrics = async (organizationId) => {
+    const [slaCompliance, ticketStats, policies, ticketsByPolicy] = await Promise.all([
+        TicketRepository.getSlaComplianceStats(organizationId),
+        TicketRepository.getTicketStatsForOrg(organizationId),
+        SlaPolicyRepository.findAll({ is_deleted: false }, { position: 1 }),
+        TicketRepository.getTicketCountsByPolicy(organizationId),
+    ]);
+
+    const policyMap = {};
+    ticketsByPolicy.forEach((item) => {
+        policyMap[item._id.toString()] = item;
+    });
+
+    const policiesWithCompliance = policies.map((p) => {
+        const stats = policyMap[p._id.toString()] || { total: 0, breached: 0, resolvedOnTime: 0, resolved: 0 };
+        const compliance = stats.resolved > 0
+            ? Math.round((stats.resolvedOnTime / stats.resolved) * 100)
+            : null;
+        return {
+            _id: p._id,
+            title: p.title,
+            compliance,
+            ticketCount: stats.total,
+        };
+    });
+
+    const avgCompliance = policiesWithCompliance.filter((p) => p.compliance !== null);
+    const overallCompliance = avgCompliance.length > 0
+        ? Math.round(avgCompliance.reduce((sum, p) => sum + p.compliance, 0) / avgCompliance.length)
+        : 0;
+
+    const avgResponseHours = slaCompliance.avgResponseMinutes > 0
+        ? (slaCompliance.avgResponseMinutes / 60).toFixed(1)
+        : '0';
+
+    return {
+        message: 'SLA metrics retrieved successfully',
+        data: {
+            overallCompliance,
+            breachesToday: ticketStats.breachesToday || 0,
+            avgResponseTime: `${avgResponseHours}h`,
+            activePolicies: policies.filter((p) => p.is_active !== false).length,
+            firstResponseCompliance: slaCompliance.firstResponseCompliance,
+            resolutionCompliance: slaCompliance.resolutionCompliance,
+            ticketStats: {
+                open: ticketStats.open || 0,
+                pending: ticketStats.pending || 0,
+                overdue: ticketStats.overdue || 0,
+                resolvedToday: ticketStats.resolvedToday || 0,
+            },
+            policiesCompliance: policiesWithCompliance,
+        },
+    };
+};
+
+const getDashboardStats = async (organizationId) => {
+    const [ticketStats, slaCompliance] = await Promise.all([
+        TicketRepository.getTicketStatsForOrg(organizationId),
+        TicketRepository.getSlaComplianceStats(organizationId),
+    ]);
+
+    return {
+        message: 'Dashboard stats retrieved',
+        data: {
+            ticketStats: {
+                open: ticketStats.open || 0,
+                pending: ticketStats.pending || 0,
+                overdue: ticketStats.overdue || 0,
+                resolvedToday: ticketStats.resolvedToday || 0,
+            },
+            slaCompliance: {
+                firstResponse: slaCompliance.firstResponseCompliance,
+                resolution: slaCompliance.resolutionCompliance,
+                avgResponseMinutes: slaCompliance.avgResponseMinutes,
+            },
+        },
+    };
+};
+
 module.exports = {
     createPolicy,
     getPolicy,
@@ -178,5 +258,7 @@ module.exports = {
     updatePolicy,
     deletePolicy,
     reorderPolicies,
-    calculateSlaTargets
+    calculateSlaTargets,
+    getMetrics,
+    getDashboardStats,
 };
