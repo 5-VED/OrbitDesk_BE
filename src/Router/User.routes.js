@@ -11,6 +11,9 @@ const {
   disableUserSchema,
   updateUserSchema,
   createUserSchema,
+  forgotPasswordSchema,
+  verifyOtpSchema,
+  resetPasswordSchema,
 } = require('../Validators/User.validator');
 
 const { validateRequest } = require('../Middlewares/Validlidator.middleware');
@@ -20,6 +23,12 @@ const router = require('express').Router();
 router.post('/signup', upload.single('profile_pic'), validateRequest(signupSchema), UserController.signup);
 
 router.post('/login', validateRequest(loginSchema), UserController.login);
+
+router.post('/forgot-password', validateRequest(forgotPasswordSchema), UserController.forgotPassword);
+
+router.post('/verify-otp', validateRequest(verifyOtpSchema), UserController.verifyOtp);
+
+router.post('/reset-password', validateRequest(resetPasswordSchema), UserController.resetPassword);
 
 // Authenticated User Routes (Admin/Agent Management)
 
@@ -42,7 +51,7 @@ router.get(
   '/agents',
   auth({
     isTokenRequired: true,
-    usersAllowed: [ROLE.ADMIN, ROLE.AGENT],
+    usersAllowed: [ROLE.ADMIN, ROLE.AGENT, ROLE.USER],
   }),
   UserController.getAgentsWithStats
 );

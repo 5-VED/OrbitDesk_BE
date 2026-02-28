@@ -107,6 +107,14 @@ const messages = {
 
   // Comment Messages
   COMMENT_ADDED_SUCCESS: 'Comment added successfully',
+
+  // Password Reset / OTP Messages
+  OTP_SENT: 'OTP sent to your email address',
+  OTP_EXPIRED: 'OTP has expired. Please request a new one',
+  OTP_INVALID: 'Invalid OTP',
+  OTP_MAX_ATTEMPTS: 'Too many failed attempts. Please request a new OTP',
+  PASSWORD_RESET_SUCCESS: 'Password reset successfully',
+  INVALID_RESET_TOKEN: 'Invalid or expired reset token',
 };
 
 module.exports = messages;

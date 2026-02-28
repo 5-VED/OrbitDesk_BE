@@ -4,7 +4,7 @@ const http = require('http');
 const server = http.createServer(app);
 const logger = require('./Utils/logger.utils');
 const connectMongoDB = require('./Database/MongoDB');
-const connectRedis = require('./Database/Rdis');
+const { connectRedis } = require('./Database/Rdis');
 
 // Handle uncaught exceptions
 process.on('uncaughtException', error => {
@@ -25,7 +25,7 @@ process.on('unhandledRejection', error => {
         logger.info('MongoDB connected successfully');
       }),
     ]);
-    // connectRedis();
+    connectRedis();
 
   } catch (err) {
     logger.error('Service connection error:', err);

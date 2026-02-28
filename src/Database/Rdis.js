@@ -1,10 +1,14 @@
 const Redis = require('ioredis');
 const logger = require('../Utils/logger.utils');
 
+let client = null;
+
 const connectRedis = () => {
-  const client = new Redis({
-    host: 'localhost',
-    port: 6379,
+  if (client) return client;
+
+  client = new Redis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: process.env.REDIS_PORT || 6379,
   });
 
   client.on('error', err => {
@@ -18,4 +22,11 @@ const connectRedis = () => {
   return client;
 };
 
-module.exports = connectRedis;
+const getRedisClient = () => {
+  if (!client) {
+    throw new Error('Redis not initialized. Call connectRedis() first.');
+  }
+  return client;
+};
+
+module.exports = { connectRedis, getRedisClient };

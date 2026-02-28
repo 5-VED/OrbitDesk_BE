@@ -7,6 +7,11 @@ const { HTTP_CODES } = require('../Constants/enums');
 const { kafkaProducer } = require('../Config/Kafka/Producer');
 const XLSX = require('xlsx');
 const TicketRepository = require('../Repository/Ticket.repository');
+const { getRedisClient } = require('../Database/Rdis');
+
+const OTP_TTL = 120;
+const OTP_ATTEMPTS_TTL = 300;
+const MAX_OTP_ATTEMPTS = 5;
 
 const signup = async (payload) => {
     const existingUser = await UserRepository.findUserByEmailOrPhone(
@@ -442,6 +447,109 @@ const getMe = async (userId) => {
     return user;
 };
 
+const forgotPassword = async (email) => {
+    const user = await UserRepository.findUserByEmail(email);
+    if (!user) {
+        throw {
+            statusCode: HTTP_CODES.NOT_FOUND,
+            message: messages.USER_NOT_FOUND,
+        };
+    }
+
+    const redis = getRedisClient();
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const hashedOtp = await hash(otp, 10);
+
+    await redis.set(`otp:${email}`, hashedOtp, 'EX', OTP_TTL);
+    await redis.del(`otp_attempts:${email}`);
+
+    await kafkaProducer('otp', 0, {
+        email: user.email,
+        otp,
+        name: user.first_name,
+        expiresIn: '2',
+    });
+
+    return { message: messages.OTP_SENT };
+};
+
+const verifyOtp = async (email, otp) => {
+    const user = await UserRepository.findUserByEmail(email);
+    if (!user) {
+        throw {
+            statusCode: HTTP_CODES.NOT_FOUND,
+            message: messages.USER_NOT_FOUND,
+        };
+    }
+
+    const redis = getRedisClient();
+
+    const attempts = parseInt(await redis.get(`otp_attempts:${email}`)) || 0;
+    if (attempts >= MAX_OTP_ATTEMPTS) {
+        await redis.del(`otp:${email}`);
+        throw {
+            statusCode: HTTP_CODES.TOO_MANY_REQUESTS,
+            message: messages.OTP_MAX_ATTEMPTS,
+        };
+    }
+
+    const storedHash = await redis.get(`otp:${email}`);
+    if (!storedHash) {
+        throw {
+            statusCode: HTTP_CODES.BAD_REQUEST,
+            message: messages.OTP_EXPIRED,
+        };
+    }
+
+    const isValid = await compare(otp, storedHash);
+    if (!isValid) {
+        await redis.incr(`otp_attempts:${email}`);
+        await redis.expire(`otp_attempts:${email}`, OTP_ATTEMPTS_TTL);
+        throw {
+            statusCode: HTTP_CODES.BAD_REQUEST,
+            message: messages.OTP_INVALID,
+        };
+    }
+
+    await redis.del(`otp:${email}`);
+    await redis.del(`otp_attempts:${email}`);
+
+    const resetToken = jwt.sign(
+        { _id: user._id, email: user.email, purpose: 'password_reset' },
+        JWT_SECRET,
+        { expiresIn: '5m' }
+    );
+
+    return {
+        message: 'OTP verified successfully',
+        data: { resetToken },
+    };
+};
+
+const resetPassword = async (token, newPassword) => {
+    let decoded;
+    try {
+        decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+        throw {
+            statusCode: HTTP_CODES.BAD_REQUEST,
+            message: messages.INVALID_RESET_TOKEN,
+        };
+    }
+
+    if (decoded.purpose !== 'password_reset') {
+        throw {
+            statusCode: HTTP_CODES.BAD_REQUEST,
+            message: messages.INVALID_RESET_TOKEN,
+        };
+    }
+
+    const hashedPassword = await hash(newPassword, 10);
+    await UserRepository.updateUserById(decoded._id, { password: hashedPassword });
+
+    return { message: messages.PASSWORD_RESET_SUCCESS };
+};
+
 module.exports = {
     signup,
     login,
@@ -456,4 +564,7 @@ module.exports = {
     bulkDelete,
     getAgentsWithStats,
     getMe,
+    forgotPassword,
+    verifyOtp,
+    resetPassword,
 };

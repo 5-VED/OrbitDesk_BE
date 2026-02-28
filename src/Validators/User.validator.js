@@ -128,6 +128,44 @@ const disableUserSchema = Joi.object({
   }),
 });
 
+// Forgot Password Validation payload
+const forgotPasswordSchema = Joi.object({
+  body: Joi.object({
+    email: Joi.string().email().required().messages({
+      'string.email': 'Please provide a valid email address',
+      'any.required': 'Email is required',
+    }),
+  }),
+});
+
+// Verify OTP Validation payload
+const verifyOtpSchema = Joi.object({
+  body: Joi.object({
+    email: Joi.string().email().required().messages({
+      'string.email': 'Please provide a valid email address',
+      'any.required': 'Email is required',
+    }),
+    otp: Joi.string().length(6).pattern(/^[0-9]+$/).required().messages({
+      'string.length': 'OTP must be 6 digits',
+      'string.pattern.base': 'OTP must contain only numbers',
+      'any.required': 'OTP is required',
+    }),
+  }),
+});
+
+// Reset Password Validation payload
+const resetPasswordSchema = Joi.object({
+  body: Joi.object({
+    token: Joi.string().required().messages({
+      'any.required': 'Reset token is required',
+    }),
+    password: Joi.string().min(6).required().messages({
+      'string.min': 'Password must be at least 6 characters long',
+      'any.required': 'Password is required',
+    }),
+  }),
+});
+
 module.exports = {
   loginSchema,
   signupSchema,
@@ -136,4 +174,7 @@ module.exports = {
   addAttachmentsSchema,
   removeAttachmentsSchema,
   disableUserSchema,
+  forgotPasswordSchema,
+  verifyOtpSchema,
+  resetPasswordSchema,
 };

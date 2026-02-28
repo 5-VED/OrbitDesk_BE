@@ -298,4 +298,50 @@ module.exports = {
       });
     }
   },
+
+  forgotPassword: async (req, res) => {
+    try {
+      const result = await UserService.forgotPassword(req.body.email);
+      return res.status(HTTP_CODES.OK).json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      return res.status(error.statusCode || HTTP_CODES.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || messages.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  verifyOtp: async (req, res) => {
+    try {
+      const result = await UserService.verifyOtp(req.body.email, req.body.otp);
+      return res.status(HTTP_CODES.OK).json({
+        success: true,
+        message: result.message,
+        data: result.data,
+      });
+    } catch (error) {
+      return res.status(error.statusCode || HTTP_CODES.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || messages.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  resetPassword: async (req, res) => {
+    try {
+      const result = await UserService.resetPassword(req.body.token, req.body.password);
+      return res.status(HTTP_CODES.OK).json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      return res.status(error.statusCode || HTTP_CODES.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || messages.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
 };
