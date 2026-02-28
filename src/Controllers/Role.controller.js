@@ -1,4 +1,4 @@
-const RoleService = require('../Services');
+const { RoleService } = require('../Services');
 const messages = require('../Constants/messages');
 const { HTTP_CODES } = require('../Constants/enums');
 
@@ -12,29 +12,41 @@ module.exports = {
         data: result.data,
       });
     } catch (error) {
-      console.log(error);
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
+      return res.status(error.statusCode || HTTP_CODES.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
+        message: error.message || messages.INTERNAL_SERVER_ERROR,
       });
     }
   },
 
-  removeRole: async (req, res) => {
+  updateRole: async (req, res) => {
     try {
-      const result = await RoleService.removeRole(req.body.role);
+      const result = await RoleService.updateRole(req.params.id, req.body);
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
         data: result.data,
       });
     } catch (error) {
-      console.log(error);
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
+      return res.status(error.statusCode || HTTP_CODES.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
+        message: error.message || messages.INTERNAL_SERVER_ERROR,
+      });
+    }
+  },
+
+  removeRole: async (req, res) => {
+    try {
+      const result = await RoleService.removeRole(req.params.id);
+      return res.status(HTTP_CODES.OK).json({
+        success: true,
+        message: result.message,
+        data: result.data,
+      });
+    } catch (error) {
+      return res.status(error.statusCode || HTTP_CODES.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: error.message || messages.INTERNAL_SERVER_ERROR,
       });
     }
   },
@@ -48,11 +60,9 @@ module.exports = {
         data: result,
       });
     } catch (error) {
-      console.log(error);
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
+      return res.status(error.statusCode || HTTP_CODES.INTERNAL_SERVER_ERROR).json({
         success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
+        message: error.message || messages.INTERNAL_SERVER_ERROR,
       });
     }
   },
