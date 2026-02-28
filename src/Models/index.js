@@ -12,4 +12,5 @@ module.exports.TicketModel = require('./Ticket.model');
 module.exports.TicketCommentModel = require('./TicketComment.model');
 module.exports.SlaPolicyModel = require('./SlaPolicy.model');
 module.exports.AgentRatingModel = require('./AgentRating.model');
+module.exports.AuditLogModel = require('./AuditLog.model');
 

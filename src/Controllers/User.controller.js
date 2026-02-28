@@ -1,6 +1,9 @@
 const UserService = require('../Services/User.service');
+const AuditLogService = require('../Services/AuditLog.service');
 const messages = require('../Constants/messages');
 const { HTTP_CODES } = require('../Constants/enums');
+
+const getIp = (req) => req.ip || req.headers['x-forwarded-for'] || '—';
 
 module.exports = {
   signup: async (req, res) => {
@@ -27,6 +30,13 @@ module.exports = {
   disableUser: async (req, res) => {
     try {
       const result = await UserService.disableUser(req.body._id);
+
+      AuditLogService.log({
+        user: req.user, action: 'Disabled', resource: 'User',
+        target: req.body._id, category: 'security',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
@@ -77,18 +87,23 @@ module.exports = {
 
   login: async (req, res) => {
     try {
-
       const { email, password } = req.body;
       const userAgentInfo = req.userAgentInfo;
       const result = await UserService.login(email, password, userAgentInfo);
 
-      // Set JWT as httpOnly cookie
       res.cookie('token', result.data.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: 2 * 24 * 60 * 60 * 1000, // 2 days (matches JWT expiry)
+        maxAge: 2 * 24 * 60 * 60 * 1000,
         path: '/',
+      });
+
+      AuditLogService.log({
+        user: { _id: result.data.user?._id, email, role: result.data.user?.role?.role, organization_id: result.data.user?.organization_id },
+        action: 'Logged in', resource: 'Session',
+        target: email, category: 'security',
+        ip: getIp(req), organizationId: result.data.user?.organization_id,
       });
 
       return res.status(HTTP_CODES.CREATED).json({
@@ -124,6 +139,12 @@ module.exports = {
 
   logoutUser: async (req, res) => {
     try {
+      AuditLogService.log({
+        user: req.user, action: 'Logged out', resource: 'Session',
+        target: req.user?.email || '', category: 'security',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
+
       res.clearCookie('token', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -202,6 +223,14 @@ module.exports = {
       }
 
       const result = await UserService.update(req.params.id, payload);
+
+      AuditLogService.log({
+        user: req.user, action: 'Updated', resource: 'User',
+        target: result?.email || req.params.id, category: 'user',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+        metadata: { fields: Object.keys(payload).join(', ') },
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: messages.USER_UPDATED_SUCCESS,
@@ -218,16 +247,21 @@ module.exports = {
 
   create: async (req, res) => {
     try {
-      // Reuse signup logic but this is authenticated create (e.g. by admin)
-      // We can just call UserService.signup which handles creation and sending email/event.
       const payload = { ...req.body };
       if (req.file) {
         payload.profile_pic = `/uploads/${req.file.filename}`;
       }
       const result = await UserService.signup(payload);
+
+      AuditLogService.log({
+        user: req.user, action: 'Created', resource: 'User',
+        target: payload.email || '', category: 'user',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
-        message: messages.USER_CREATED_SUCCESS, // or specific message? Signup returns USER_CREATED_SUCCESS
+        message: messages.USER_CREATED_SUCCESS,
         data: result.data,
       });
     } catch (error) {
@@ -250,6 +284,12 @@ module.exports = {
 
       const result = await UserService.bulkImport(req.file.buffer);
 
+      AuditLogService.log({
+        user: req.user, action: 'Bulk imported', resource: 'Users',
+        target: `${result.data?.successCount || 0} users imported`, category: 'user',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
@@ -267,6 +307,13 @@ module.exports = {
   deleteUser: async (req, res) => {
     try {
       const result = await UserService.deleteUser(req.params.id);
+
+      AuditLogService.log({
+        user: req.user, action: 'Deleted', resource: 'User',
+        target: req.params.id, category: 'user',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
@@ -285,6 +332,13 @@ module.exports = {
     try {
       const { ids } = req.body;
       const result = await UserService.bulkDelete(ids);
+
+      AuditLogService.log({
+        user: req.user, action: 'Bulk deleted', resource: 'Users',
+        target: `${ids?.length || 0} users`, category: 'user',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
@@ -333,6 +387,13 @@ module.exports = {
   resetPassword: async (req, res) => {
     try {
       const result = await UserService.resetPassword(req.body.token, req.body.password);
+
+      AuditLogService.log({
+        user: null, action: 'Reset password', resource: 'User',
+        target: '', category: 'security',
+        ip: getIp(req),
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,

@@ -1,11 +1,21 @@
 const { RoleService } = require('../Services');
+const AuditLogService = require('../Services/AuditLog.service');
 const messages = require('../Constants/messages');
 const { HTTP_CODES } = require('../Constants/enums');
+
+const getIp = (req) => req.ip || req.headers['x-forwarded-for'] || '—';
 
 module.exports = {
   addRole: async (req, res) => {
     try {
       const result = await RoleService.addRole(req.body);
+
+      AuditLogService.log({
+        user: req.user, action: 'Created', resource: 'Role',
+        target: req.body.role || '', category: 'security',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
+
       return res.status(HTTP_CODES.CREATED).json({
         success: true,
         message: result.message,
@@ -22,6 +32,14 @@ module.exports = {
   updateRole: async (req, res) => {
     try {
       const result = await RoleService.updateRole(req.params.id, req.body);
+
+      AuditLogService.log({
+        user: req.user, action: 'Modified', resource: 'Role',
+        target: result.data?.role || req.params.id, category: 'security',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+        metadata: { fields: Object.keys(req.body).join(', ') },
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
@@ -38,6 +56,13 @@ module.exports = {
   removeRole: async (req, res) => {
     try {
       const result = await RoleService.removeRole(req.params.id);
+
+      AuditLogService.log({
+        user: req.user, action: 'Deleted', resource: 'Role',
+        target: result.data?.role || req.params.id, category: 'security',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
