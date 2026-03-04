@@ -22,11 +22,23 @@ router.get(
   OrganizationController.list
 );
 
+router.get(
+  '/:id',
+  auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }),
+  OrganizationController.getById
+);
+
 router.patch(
   '/:id',
   auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }),
   validateRequest(updateOrganizationSchema),
   OrganizationController.update
+);
+
+router.delete(
+  '/:id',
+  auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }),
+  OrganizationController.delete
 );
 
 module.exports = router;

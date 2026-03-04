@@ -19,11 +19,23 @@ router.get(
   GroupController.list
 );
 
+router.get(
+  '/:id',
+  auth({ isTokenRequired: true, usersAllowed: [ROLE.USER, ROLE.ADMIN] }),
+  GroupController.getById
+);
+
 router.patch(
   '/:id',
   auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }),
   validateRequest(updateGroupSchema),
   GroupController.update
+);
+
+router.delete(
+  '/:id',
+  auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }),
+  GroupController.delete
 );
 
 module.exports = router;
