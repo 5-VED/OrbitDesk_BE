@@ -99,11 +99,24 @@ const messages = {
   ORG_NOT_FOUND: 'Organization not found',
   ORG_UPDATED_SUCCESS: 'Organization updated successfully',
   ORG_LIST_RETRIEVED: 'Organizations retrieved successfully',
+  ORG_FETCHED_SUCCESS: 'Organization fetched successfully',
+  ORG_DELETED_SUCCESS: 'Organization deleted successfully',
 
   // Group Messages
   GROUP_NOT_FOUND: 'Group not found',
   GROUP_UPDATED_SUCCESS: 'Group updated successfully',
   GROUP_LIST_RETRIEVED: 'Groups retrieved successfully',
+  GROUP_FETCHED_SUCCESS: 'Group fetched successfully',
+  GROUP_DELETED_SUCCESS: 'Group deleted successfully',
+
+  // Settings Messages
+  SETTINGS_FETCHED_SUCCESS: 'Settings fetched successfully',
+  SETTINGS_UPDATED_SUCCESS: 'Settings updated successfully',
+  SETTINGS_NOT_FOUND: 'Settings not found',
+
+  // Reports Messages
+  REPORTS_FETCHED_SUCCESS: 'Reports fetched successfully',
+  DASHBOARD_STATS_FETCHED: 'Dashboard statistics fetched successfully',
 
   // Comment Messages
   COMMENT_ADDED_SUCCESS: 'Comment added successfully',

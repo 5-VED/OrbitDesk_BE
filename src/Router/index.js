@@ -10,5 +10,8 @@ router.use('/kb', require('./KnowledgeBase/KnowledgeBase.routes'));
 router.use('/sla', require('./SlaPolicy.routes'));
 router.use('/ratings', require('./AgentRating.routes'));
 router.use('/audit-logs', require('./AuditLog.routes'));
+router.use('/settings', require('./Settings.routes'));
+router.use('/reports', require('./Reports.routes'));
+router.use('/dashboard', require('./Dashboard.routes'));
 
 module.exports = router;
