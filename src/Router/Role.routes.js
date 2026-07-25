@@ -4,22 +4,28 @@ const { ROLE } = require('../Constants/enums');
 
 const router = require('express').Router();
 
+router.get(
+  '/',
+  auth({ isTokenRequired: true, usersAllowed: ['*'] }),
+  RoleController.listRoles
+);
+
 router.post(
-  '/add-role',
-  // auth({ isTokenRequired: true, usersAllowed: ROLE.SUPER_ADMIN }),
+  '/',
+  auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }),
   RoleController.addRole
 );
 
-router.delete(
-  '/remove-role',
-  auth({ isTokenRequired: true, usersAllowed: ROLE.SUPER_ADMIN }),
-  RoleController.removeRole
+router.patch(
+  '/:id',
+  auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }),
+  RoleController.updateRole
 );
 
-router.get(
-  '/',
-  auth({ isTokenRequired: true, usersAllowed: ['*'] }), // Allow all authenticated users to list roles
-  RoleController.listRoles
+router.delete(
+  '/:id',
+  auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }),
+  RoleController.removeRole
 );
 
 module.exports = router;

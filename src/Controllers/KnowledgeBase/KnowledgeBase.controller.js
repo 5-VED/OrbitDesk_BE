@@ -1,12 +1,22 @@
 const KnowledgeBaseService = require('../../Services/KnowledgeBase/KnowledgeBase.service');
+const AuditLogService = require('../../Services/AuditLog.service');
 const { HTTP_CODES } = require('../../Constants/enums');
 const messages = require('../../Constants/messages');
+
+const getIp = (req) => req.ip || req.headers['x-forwarded-for'] || '—';
 
 module.exports = {
     // Categories
     createCategory: async (req, res) => {
         try {
             const result = await KnowledgeBaseService.createCategory(req.body);
+
+            AuditLogService.log({
+                user: req.user, action: 'Created', resource: 'KB Category',
+                target: req.body.name || '', category: 'data',
+                ip: getIp(req), organizationId: req.user?.organization_id,
+            });
+
             return res.status(HTTP_CODES.CREATED).json({
                 success: true,
                 message: "Category created successfully",
@@ -67,6 +77,13 @@ module.exports = {
                     message: "Category not found",
                 });
             }
+
+            AuditLogService.log({
+                user: req.user, action: 'Updated', resource: 'KB Category',
+                target: result.name || req.params.id, category: 'data',
+                ip: getIp(req), organizationId: req.user?.organization_id,
+            });
+
             return res.status(HTTP_CODES.OK).json({
                 success: true,
                 message: "Category updated successfully",
@@ -89,6 +106,13 @@ module.exports = {
                     message: "Category not found",
                 });
             }
+
+            AuditLogService.log({
+                user: req.user, action: 'Deleted', resource: 'KB Category',
+                target: req.params.id, category: 'data',
+                ip: getIp(req), organizationId: req.user?.organization_id,
+            });
+
             return res.status(HTTP_CODES.OK).json({
                 success: true,
                 message: "Category deleted successfully",
@@ -105,8 +129,14 @@ module.exports = {
     // Articles
     createArticle: async (req, res) => {
         try {
-            // Assume user ID is available from auth middleware in req.user._id
             const result = await KnowledgeBaseService.createArticle(req.body, req.user._id);
+
+            AuditLogService.log({
+                user: req.user, action: 'Created', resource: 'KB Article',
+                target: req.body.title || '', category: 'data',
+                ip: getIp(req), organizationId: req.user?.organization_id,
+            });
+
             return res.status(HTTP_CODES.CREATED).json({
                 success: true,
                 message: "Article created successfully",
@@ -174,6 +204,13 @@ module.exports = {
                     message: "Article not found",
                 });
             }
+
+            AuditLogService.log({
+                user: req.user, action: 'Updated', resource: 'KB Article',
+                target: result.title || req.params.id, category: 'data',
+                ip: getIp(req), organizationId: req.user?.organization_id,
+            });
+
             return res.status(HTTP_CODES.OK).json({
                 success: true,
                 message: "Article updated successfully",
@@ -196,6 +233,13 @@ module.exports = {
                     message: "Article not found",
                 });
             }
+
+            AuditLogService.log({
+                user: req.user, action: 'Deleted', resource: 'KB Article',
+                target: req.params.id, category: 'data',
+                ip: getIp(req), organizationId: req.user?.organization_id,
+            });
+
             return res.status(HTTP_CODES.OK).json({
                 success: true,
                 message: "Article deleted successfully",

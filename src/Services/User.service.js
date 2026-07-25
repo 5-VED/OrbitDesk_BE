@@ -7,6 +7,7 @@ const { HTTP_CODES } = require('../Constants/enums');
 const { kafkaProducer } = require('../Config/Kafka/Producer');
 const XLSX = require('xlsx');
 const TicketRepository = require('../Repository/Ticket.repository');
+const AgentRatingRepository = require('../Repository/AgentRating.repository');
 const { getRedisClient } = require('../Database/Rdis');
 
 const OTP_TTL = 120;
@@ -392,18 +393,26 @@ const getAgentsWithStats = async (query = {}) => {
     const agents = await UserRepository.findAllUsers(filter, skip, limit);
     const total = await UserRepository.countUsers(filter);
 
-    // Get ticket stats for all agents in one aggregation
+    // Get ticket stats and ratings for all agents in parallel
     const agentIds = agents.map(a => a._id);
-    const ticketStats = await TicketRepository.getAgentTicketStats(agentIds);
+    const [ticketStats, ratingStats] = await Promise.all([
+        TicketRepository.getAgentTicketStats(agentIds),
+        AgentRatingRepository.getAverageForAllAgents(agentIds),
+    ]);
 
-    // Map stats by agent id for quick lookup
     const statsMap = {};
     ticketStats.forEach(s => {
         statsMap[s._id.toString()] = s;
     });
 
+    const ratingMap = {};
+    ratingStats.forEach(r => {
+        ratingMap[r._id.toString()] = r;
+    });
+
     const enrichedAgents = agents.map(agent => {
         const stats = statsMap[agent._id.toString()] || { open: 0, resolved: 0, total: 0 };
+        const rating = ratingMap[agent._id.toString()] || { avgRating: 0, totalRatings: 0 };
         return {
             _id: agent._id,
             first_name: agent.first_name,
@@ -420,6 +429,10 @@ const getAgentsWithStats = async (query = {}) => {
                 open: stats.open || 0,
                 resolved: stats.resolved || 0,
                 total: stats.total || 0,
+            },
+            rating: {
+                avg: Math.round((rating.avgRating || 0) * 10) / 10,
+                total: rating.totalRatings || 0,
             },
             createdAt: agent.createdAt,
         };

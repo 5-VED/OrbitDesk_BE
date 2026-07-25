@@ -1,6 +1,9 @@
 const TicketService = require('../Services/Ticket.service');
+const AuditLogService = require('../Services/AuditLog.service');
 const { HTTP_CODES } = require('../Constants/enums');
 const messages = require('../Constants/messages');
+
+const getIp = (req) => req.ip || req.headers['x-forwarded-for'] || '—';
 
 module.exports = {
   create: async (req, res) => {
@@ -13,6 +16,12 @@ module.exports = {
       };
 
       const result = await TicketService.createTicket(payload);
+
+      AuditLogService.log({
+        user: req.user, action: 'Created', resource: 'Ticket',
+        target: result.data?.subject || '', category: 'data',
+        ip: getIp(req), organizationId: req.user.organization_id,
+      });
 
       return res.status(HTTP_CODES.CREATED).json({
         success: true,
@@ -76,6 +85,16 @@ module.exports = {
         updateData: req.body,
         updatedBy: req.user
       });
+
+      const changes = Object.keys(req.body).join(', ');
+      AuditLogService.log({
+        user: req.user, action: 'Updated', resource: 'Ticket',
+        target: result.data?.subject || req.params.id,
+        category: 'data', ip: getIp(req),
+        organizationId: req.user.organization_id,
+        metadata: { ticketId: req.params.id, fields: changes },
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
@@ -96,6 +115,13 @@ module.exports = {
         ticketId: req.params.id,
         organizationId: req.user.organization_id
       });
+
+      AuditLogService.log({
+        user: req.user, action: 'Deleted', resource: 'Ticket',
+        target: req.params.id, category: 'data',
+        ip: getIp(req), organizationId: req.user.organization_id,
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
@@ -180,6 +206,13 @@ module.exports = {
         commentId: req.params.commentId,
         userId: req.user._id
       });
+
+      AuditLogService.log({
+        user: req.user, action: 'Deleted', resource: 'Ticket Comment',
+        target: `on ticket ${req.params.id}`, category: 'data',
+        ip: getIp(req), organizationId: req.user.organization_id,
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
@@ -202,6 +235,13 @@ module.exports = {
         organizationId: req.user.organization_id,
         updateData: updates
       });
+
+      AuditLogService.log({
+        user: req.user, action: 'Bulk updated', resource: 'Tickets',
+        target: `${ticket_ids?.length || 0} tickets`, category: 'data',
+        ip: getIp(req), organizationId: req.user.organization_id,
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,
@@ -223,6 +263,13 @@ module.exports = {
         ticketIds: ticket_ids,
         organizationId: req.user.organization_id
       });
+
+      AuditLogService.log({
+        user: req.user, action: 'Bulk deleted', resource: 'Tickets',
+        target: `${ticket_ids?.length || 0} tickets`, category: 'data',
+        ip: getIp(req), organizationId: req.user.organization_id,
+      });
+
       return res.status(HTTP_CODES.OK).json({
         success: true,
         message: result.message,

@@ -8,18 +8,31 @@ const slaPolicySchema = new Schema(
       required: true,
       trim: true,
     },
+    description: {
+      type: Schema.Types.String,
+      default: '',
+      trim: true,
+    },
+    is_active: {
+      type: Schema.Types.Boolean,
+      default: true,
+    },
+    is_default: {
+      type: Schema.Types.Boolean,
+      default: false,
+    },
     position: {
       type: Number,
       default: 0,
     },
     filter: {
       type: Map,
-      of: Schema.Types.Mixed, // e.g. { "priority": "high" }
+      of: Schema.Types.Mixed,
     },
     policy_metrics: [
       {
-        priority: String, // 'urgent'
-        target: String, // 'first_reply_time'
+        priority: String,
+        target: String,
         target_minutes: Number,
       },
     ],

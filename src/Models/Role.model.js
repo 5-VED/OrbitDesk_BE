@@ -7,11 +7,26 @@ const roleSchema = new Schema(
       type: Schema.Types.String,
       required: true,
       trim: true,
+      unique: true,
+    },
+    description: {
+      type: Schema.Types.String,
+      default: '',
+      trim: true,
+    },
+    permissions: {
+      type: [Schema.Types.String],
+      default: [],
+    },
+    isSystem: {
+      type: Schema.Types.Boolean,
+      default: false,
     },
     ...baseFieldsSchema.obj,
   },
   {
     collection: 'Role_Master',
+    timestamps: true,
   }
 );
 

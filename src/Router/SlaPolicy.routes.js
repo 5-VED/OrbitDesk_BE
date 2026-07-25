@@ -1,14 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const SlaPolicyController = require('../Controllers/SlaPolicy.controller');
-// Add auth middleware if needed, e.g. verifyToken
-// const { verifyToken } = require('../Middlewares/auth.middleware');
+const auth = require('../Middlewares/Auth.middleware');
+const { ROLE } = require('../Constants/enums');
 
-router.post('/', SlaPolicyController.create);
-router.get('/', SlaPolicyController.list);
-router.post('/reorder', SlaPolicyController.reorder); // Reorder might need to be before /:id to avoid conflict if id is not strict regex
-router.get('/:id', SlaPolicyController.get);
-router.patch('/:id', SlaPolicyController.update);
-router.delete('/:id', SlaPolicyController.delete);
+router.get('/metrics', auth({ isTokenRequired: true, usersAllowed: ['*'] }), SlaPolicyController.metrics);
+router.get('/dashboard-stats', auth({ isTokenRequired: true, usersAllowed: ['*'] }), SlaPolicyController.dashboardStats);
+
+router.get('/', auth({ isTokenRequired: true, usersAllowed: ['*'] }), SlaPolicyController.list);
+router.post('/', auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }), SlaPolicyController.create);
+router.post('/reorder', auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }), SlaPolicyController.reorder);
+router.get('/:id', auth({ isTokenRequired: true, usersAllowed: ['*'] }), SlaPolicyController.get);
+router.patch('/:id', auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }), SlaPolicyController.update);
+router.delete('/:id', auth({ isTokenRequired: true, usersAllowed: [ROLE.ADMIN] }), SlaPolicyController.delete);
 
 module.exports = router;

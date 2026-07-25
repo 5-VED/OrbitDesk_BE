@@ -70,6 +70,46 @@ const options = {
         name: 'Users',
         description: 'User management endpoints',
       },
+      {
+        name: 'Roles',
+        description: 'Role management API',
+      },
+      {
+        name: 'Organizations',
+        description: 'Organization management API',
+      },
+      {
+        name: 'Groups',
+        description: 'Group management API',
+      },
+      {
+        name: 'Tickets',
+        description: 'Ticket management API',
+      },
+      {
+        name: 'AI',
+        description: 'AI-powered assistance endpoints',
+      },
+      {
+        name: 'Knowledge Base',
+        description: 'Knowledge base categories and articles management',
+      },
+      {
+        name: 'SLA Policies',
+        description: 'Service Level Agreement policy management',
+      },
+      {
+        name: 'Agent Ratings',
+        description: 'Agent rating and feedback management',
+      },
+      {
+        name: 'Audit Logs',
+        description: 'Audit log management and export',
+      },
+      {
+        name: 'Conversations',
+        description: 'Conversation management API',
+      },
     ],
   },
   apis: ['./src/Documentation/**/*.js', './src/Models/*.js'],

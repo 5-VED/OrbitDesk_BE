@@ -132,10 +132,35 @@ module.exports = {
             updateData
         );
 
-        // Recalculate SLA if priority changed
-        if (updateData.priority && currentTicket.priority !== updateData.priority) {
+        // Track solved_at when ticket becomes solved/closed
+        if (updateData.status && ['solved', 'closed'].includes(updateData.status) &&
+            !['solved', 'closed'].includes(currentTicket.status)) {
+            const slaUpdate = { solved_at: new Date() };
+
+            // Check for SLA breach on resolution
+            if (currentTicket.resolve_due_at && new Date() > new Date(currentTicket.resolve_due_at)) {
+                slaUpdate.sla_breach_at = slaUpdate.sla_breach_at || new Date();
+            }
+
+            await TicketRepository.updateTicket({ _id: ticketId }, slaUpdate);
+            Object.assign(ticket, slaUpdate);
+        }
+
+        // Clear solved_at if ticket is reopened
+        if (updateData.status && !['solved', 'closed'].includes(updateData.status) &&
+            ['solved', 'closed'].includes(currentTicket.status)) {
+            await TicketRepository.updateTicket({ _id: ticketId }, { solved_at: null });
+        }
+
+        // Recalculate SLA if priority, group, type, or channel changed
+        const slaRelevantFieldChanged =
+            (updateData.priority && currentTicket.priority !== updateData.priority) ||
+            (updateData.group_id && String(currentTicket.group_id) !== String(updateData.group_id)) ||
+            (updateData.type && currentTicket.type !== updateData.type) ||
+            (updateData.channel && currentTicket.channel !== updateData.channel);
+
+        if (slaRelevantFieldChanged) {
             try {
-                // Merge updateData into currentTicket for calculation
                 const tempTicket = { ...currentTicket.toObject(), ...updateData };
                 const slaTargets = await SlaPolicyService.calculateSlaTargets(tempTicket);
 
@@ -146,17 +171,15 @@ module.exports = {
                         resolve_due_at: slaTargets.resolve_due_at
                     };
 
-                    // Update the ticket again with new SLA
                     await TicketRepository.updateTicket(
                         { _id: ticketId, organization_id: organizationId },
                         slaUpdate
                     );
 
-                    // Merge for return
                     Object.assign(ticket, slaUpdate);
                 }
             } catch (error) {
-                console.error('Failed to recalculate SLA on prompt update:', error);
+                console.error('Failed to recalculate SLA on ticket update:', error);
             }
         }
 
@@ -238,6 +261,21 @@ module.exports = {
         };
 
         const comment = await TicketRepository.createComment(commentPayload);
+
+        // Track first_response_at: set when first public reply is from someone other than the requester
+        if (commentData.public && !ticket.first_response_at) {
+            const isAgentReply = ticket.requester_id?._id?.toString() !== userId.toString();
+            if (isAgentReply) {
+                const now = new Date();
+                const update = { first_response_at: now };
+
+                if (ticket.response_due_at && now > new Date(ticket.response_due_at)) {
+                    update.sla_breach_at = ticket.sla_breach_at || now;
+                }
+
+                await TicketRepository.updateTicket({ _id: ticketId }, update);
+            }
+        }
 
         // Publish notification for public comments
         if (commentData.public && author) {
