@@ -4,7 +4,7 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Flick API Documentation',
+      title: 'OrbitDesk API Documentation',
       version: '1.0.0',
       description: 'API documentation for Flick application',
       license: {
@@ -18,7 +18,11 @@ const options = {
         description: 'Development server',
       },
       {
-        url: 'https://api.flick.com',
+        url: 'https://api.orbitdesk.dev',
+        description: 'Development server',
+      },
+      {
+        url: 'https://api.orbitdesk.com',
         description: 'Production server',
       },
     ],

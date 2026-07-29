@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const logger = require('../Utils/logger.utils');
-const uri = process.env.MONGODB_URI; // Make sure to set this in your .env file
+// const uri = process.env.MONGODB_URI; // Make sure to set this in your .env file
+const uri = "mongodb://localhost:27017/SupportDesk"; // Make sure to set this in your .env file
 
 const connectMongoDB = async () => {
   try {

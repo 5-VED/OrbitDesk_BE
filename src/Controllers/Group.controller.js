@@ -1,135 +1,95 @@
-const { GroupModel, UserModel, TicketModel } = require('../Models');
-const messages = require('../Constants/messages');
+const GroupService = require('../Services/Group.service');
+const AuditLogService = require('../Services/AuditLog.service');
 const { HTTP_CODES } = require('../Constants/enums');
 
-module.exports = {
-  create: async (req, res) => {
-    try {
-      const payload = { ...req.body };
-      if (!payload.organization_id && req.user?.organization_id) {
-        payload.organization_id = req.user.organization_id;
-      }
+const getIp = (req) => req.ip || req.headers['x-forwarded-for'] || '—';
 
-      const group = await GroupModel.create(payload);
+module.exports = {
+  create: async (req, res, next) => {
+    try {
+      const payload = { ...req.body, user: req.user };
+      const result = await GroupService.create(payload);
+
+      AuditLogService.log({
+        user: req.user, action: 'Created', resource: 'Group',
+        target: req.body.name || '', category: 'general',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
 
       return res.status(HTTP_CODES.CREATED).json({
         success: true,
-        message: messages.GROUP_CREATED_SUCCESS,
+        message: result.message,
+        data: result.data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  list: async (req, res, next) => {
+    try {
+      const result = await GroupService.list(req.query, req.user);
+
+      return res.status(HTTP_CODES.OK).json({
+        success: true,
+        message: result.message,
+        data: result.data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  getById: async (req, res, next) => {
+    try {
+      const group = await GroupService.getById(req.params.id);
+
+      return res.status(HTTP_CODES.OK).json({
+        success: true,
+        message: 'Group fetched successfully',
         data: group,
       });
     } catch (error) {
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: messages.GROUP_CREATE_ERROR,
-        error,
-      });
+      next(error);
     }
   },
 
-  list: async (req, res) => {
+  update: async (req, res, next) => {
     try {
-      const query = {};
-      if (req.user?.organization_id) {
-        query.organization_id = req.user.organization_id;
-      }
+      const result = await GroupService.update(req.params.id, req.body);
 
-      const groups = await GroupModel.find(query).sort({ createdAt: -1 });
-
-      const groupsWithStats = await Promise.all(
-        groups.map(async (group) => {
-          const [memberCount, ticketCount] = await Promise.all([
-            UserModel.countDocuments({ groups: group._id }),
-            TicketModel.countDocuments({ group_id: group._id }),
-          ]);
-          return { ...group.toObject(), memberCount, ticketCount };
-        })
-      );
+      AuditLogService.log({
+        user: req.user, action: 'Updated', resource: 'Group',
+        target: req.params.id, category: 'general',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
 
       return res.status(HTTP_CODES.OK).json({
         success: true,
-        message: messages.GROUP_LIST_RETRIEVED,
-        data: groupsWithStats,
+        message: result.message,
+        data: result.data,
       });
     } catch (error) {
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
-      });
+      next(error);
     }
   },
 
-  getById: async (req, res) => {
+  delete: async (req, res, next) => {
     try {
-      const group = await GroupModel.findById(req.params.id);
+      const result = await GroupService.remove(req.params.id);
 
-      if (!group) {
-        return res.status(HTTP_CODES.NOT_FOUND).json({
-          success: false,
-          message: messages.GROUP_NOT_FOUND,
-        });
-      }
+      AuditLogService.log({
+        user: req.user, action: 'Deleted', resource: 'Group',
+        target: req.params.id, category: 'general',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
 
       return res.status(HTTP_CODES.OK).json({
         success: true,
-        message: messages.GROUP_FETCHED_SUCCESS,
-        data: group,
+        message: result.message,
       });
     } catch (error) {
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
-      });
-    }
-  },
-
-  update: async (req, res) => {
-    try {
-      const group = await GroupModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
-
-      if (!group) {
-        return res.status(HTTP_CODES.NOT_FOUND).json({
-          success: false,
-          message: messages.GROUP_NOT_FOUND,
-        });
-      }
-
-      return res.status(HTTP_CODES.OK).json({
-        success: true,
-        message: messages.GROUP_UPDATED_SUCCESS,
-        data: group,
-      });
-    } catch (error) {
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
-      });
-    }
-  },
-
-  delete: async (req, res) => {
-    try {
-      const group = await GroupModel.findByIdAndDelete(req.params.id);
-
-      if (!group) {
-        return res.status(HTTP_CODES.NOT_FOUND).json({
-          success: false,
-          message: messages.GROUP_NOT_FOUND,
-        });
-      }
-
-      return res.status(HTTP_CODES.OK).json({
-        success: true,
-        message: messages.GROUP_DELETED_SUCCESS,
-      });
-    } catch (error) {
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
-      });
+      next(error);
     }
   },
 };

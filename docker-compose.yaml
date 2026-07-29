@@ -1,32 +1,6 @@
 services:
-  app:    
-    container_name: UserSvc
-    build: .
-    working_dir: /app
-    volumes: 
-      - .:/app
-    ports:
-      - "5000:5000"
-    environment:
-      - MONGODB_URI=mongodb://mongodb:27017/OrgitDesk
-      - JWT_SECRET=R4!w8@eYqP1^D3kZxL9#MvJcT0&BhUoF7GmNpQv2VzXsAbE
-      - IPINFO_TOKEN=0d343e3cb42de5
-    depends_on:
-      - mongodb
-      - kafka
-    restart: unless-stopped
-
-  mongodb:
-    container_name: Flick_Database
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    restart: unless-stopped
-
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.0
+    image: confluentinc/cp-zookeeper:7.6.1
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -35,7 +9,7 @@ services:
       - "2181:2181"
 
   kafka:
-    image: confluentinc/cp-kafka:7.3.0
+    image: confluentinc/cp-kafka:7.6.1
     container_name: kafka
     ports:
       - "9092:9092"
@@ -49,6 +23,3 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-
-volumes:
-  mongodb_data:

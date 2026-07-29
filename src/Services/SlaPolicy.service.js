@@ -1,5 +1,7 @@
 const SlaPolicyRepository = require('../Repository/SlaPolicy.repository');
 const TicketRepository = require('../Repository/Ticket.repository');
+const { BusinessHoursModel } = require('../Models');
+const { calculateDueDate } = require('../Utils/businessHours');
 const messages = require('../Constants/messages');
 const { HTTP_CODES } = require('../Constants/enums');
 
@@ -133,36 +135,28 @@ const calculateSlaTargets = async (ticket) => {
 
     if (!appliedPolicy) return null;
 
-    // Find metric for ticket priority
     const metric = appliedPolicy.policy_metrics.find(m => m.priority === ticket.priority);
-    if (!metric) return { policy_id: appliedPolicy._id }; // Policy applies but no specific metric for this priority
+    if (!metric) return { policy_id: appliedPolicy._id };
 
     const now = new Date();
+    const organizationId = ticket.organization_id;
 
-    // Simple calculation: add minutes to now. 
-    // TODO: Business hours calculation (complex, requires BusinessHours model)
-    // For now use 24/7 logic
+    const businessHours = organizationId
+        ? await BusinessHoursModel.findOne({ organization_id: organizationId, is_default: true, is_deleted: false })
+        : null;
+
+    const responseMetric = appliedPolicy.policy_metrics.find(m => m.priority === ticket.priority && m.target === 'first_reply_time');
+    const resolveMetric = appliedPolicy.policy_metrics.find(m => m.priority === ticket.priority && m.target === 'resolution_time');
 
     let responseDue = null;
     let resolveDue = null;
 
-    // Usually metrics list targets. We need to parse.
-    // Assuming metric structure: [{ priority: 'high', first_response_minutes: 60, resolution_minutes: 240 }]
-    // But the model defined:  { priority: String, target: String, target_minutes: Number } 
-    // This implies one entry per target type per priority? Or strictly one target type?
-    // Let's check model again. 
-    // policy_metrics: [{ priority: String, target: String, target_minutes: Number }]
-    // target is likely 'first_reply_time' or 'resolution_time'
-
-    const responseMetric = appliedPolicy.policy_metrics.find(m => m.priority === ticket.priority && m.target === 'first_reply_time');
-    const resolveMetric = appliedPolicy.policy_metrics.find(m => m.priority === ticket.priority && m.target === 'resolution_time'); // or 'next_reply_time'
-
-    if (responseMetric) {
-        responseDue = new Date(now.getTime() + responseMetric.target_minutes * 60000);
+    if (responseMetric && responseMetric.target_minutes) {
+        responseDue = calculateDueDate(now, responseMetric.target_minutes, businessHours);
     }
 
-    if (resolveMetric) {
-        resolveDue = new Date(now.getTime() + resolveMetric.target_minutes * 60000);
+    if (resolveMetric && resolveMetric.target_minutes) {
+        resolveDue = calculateDueDate(now, resolveMetric.target_minutes, businessHours);
     }
 
     return {

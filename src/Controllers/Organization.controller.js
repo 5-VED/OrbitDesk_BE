@@ -1,127 +1,94 @@
-const { OrganizationModel, UserModel, TicketModel } = require('../Models');
-const messages = require('../Constants/messages');
+const OrganizationService = require('../Services/Organization.service');
+const AuditLogService = require('../Services/AuditLog.service');
 const { HTTP_CODES } = require('../Constants/enums');
 
+const getIp = (req) => req.ip || req.headers['x-forwarded-for'] || '—';
+
 module.exports = {
-  create: async (req, res) => {
+  create: async (req, res, next) => {
     try {
-      const organization = await OrganizationModel.create(req.body);
+      const result = await OrganizationService.create(req.body);
+
+      AuditLogService.log({
+        user: req.user, action: 'Created', resource: 'Organization',
+        target: req.body.name || '', category: 'general',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
 
       return res.status(HTTP_CODES.CREATED).json({
         success: true,
-        message: messages.ORG_CREATED_SUCCESS,
+        message: result.message,
+        data: result.data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  list: async (req, res, next) => {
+    try {
+      const result = await OrganizationService.list(req.query);
+
+      return res.status(HTTP_CODES.OK).json({
+        success: true,
+        message: result.message,
+        data: result.data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  getById: async (req, res, next) => {
+    try {
+      const organization = await OrganizationService.getById(req.params.id);
+
+      return res.status(HTTP_CODES.OK).json({
+        success: true,
+        message: 'Organization fetched successfully',
         data: organization,
       });
     } catch (error) {
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
-      });
+      next(error);
     }
   },
 
-  list: async (req, res) => {
+  update: async (req, res, next) => {
     try {
-      const organizations = await OrganizationModel.find().sort({ createdAt: -1 });
+      const result = await OrganizationService.update(req.params.id, req.body);
 
-      const orgsWithStats = await Promise.all(
-        organizations.map(async (org) => {
-          const [userCount, ticketCount] = await Promise.all([
-            UserModel.countDocuments({ organization_id: org._id }),
-            TicketModel.countDocuments({ organization_id: org._id }),
-          ]);
-          return { ...org.toObject(), userCount, ticketCount };
-        })
-      );
+      AuditLogService.log({
+        user: req.user, action: 'Updated', resource: 'Organization',
+        target: req.params.id, category: 'general',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
 
       return res.status(HTTP_CODES.OK).json({
         success: true,
-        message: messages.ORG_LIST_RETRIEVED,
-        data: orgsWithStats,
+        message: result.message,
+        data: result.data,
       });
     } catch (error) {
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
-      });
+      next(error);
     }
   },
 
-  getById: async (req, res) => {
+  delete: async (req, res, next) => {
     try {
-      const organization = await OrganizationModel.findById(req.params.id);
+      const result = await OrganizationService.remove(req.params.id);
 
-      if (!organization) {
-        return res.status(HTTP_CODES.NOT_FOUND).json({
-          success: false,
-          message: messages.ORG_NOT_FOUND,
-        });
-      }
+      AuditLogService.log({
+        user: req.user, action: 'Deleted', resource: 'Organization',
+        target: req.params.id, category: 'general',
+        ip: getIp(req), organizationId: req.user?.organization_id,
+      });
 
       return res.status(HTTP_CODES.OK).json({
         success: true,
-        message: messages.ORG_FETCHED_SUCCESS,
-        data: organization,
+        message: result.message,
       });
     } catch (error) {
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
-      });
-    }
-  },
-
-  update: async (req, res) => {
-    try {
-      const organization = await OrganizationModel.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
-      });
-
-      if (!organization) {
-        return res.status(HTTP_CODES.NOT_FOUND).json({
-          success: false,
-          message: messages.ORG_NOT_FOUND,
-        });
-      }
-
-      return res.status(HTTP_CODES.OK).json({
-        success: true,
-        message: messages.ORG_UPDATED_SUCCESS,
-        data: organization,
-      });
-    } catch (error) {
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
-      });
-    }
-  },
-
-  delete: async (req, res) => {
-    try {
-      const organization = await OrganizationModel.findByIdAndDelete(req.params.id);
-
-      if (!organization) {
-        return res.status(HTTP_CODES.NOT_FOUND).json({
-          success: false,
-          message: messages.ORG_NOT_FOUND,
-        });
-      }
-
-      return res.status(HTTP_CODES.OK).json({
-        success: true,
-        message: messages.ORG_DELETED_SUCCESS,
-      });
-    } catch (error) {
-      return res.status(HTTP_CODES.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: messages.INTERNAL_SERVER_ERROR,
-        error,
-      });
+      next(error);
     }
   },
 };
