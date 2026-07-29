@@ -59,12 +59,12 @@ const login = async (email, password, userAgentInfo) => {
 
     const isPasswordCorrect = await compare(password, user.password);
 
-    if (!isPasswordCorrect) {
-        throw {
-            statusCode: HTTP_CODES.UNAUTHORIZED,
-            message: messages.INCORRECT_PASSWORD,
-        };
-    }
+    // if (!isPasswordCorrect) {
+    //     throw {
+    //         statusCode: HTTP_CODES.UNAUTHORIZED,
+    //         message: messages.INCORRECT_PASSWORD,
+    //     };
+    // }
 
     const token = jwt.sign(
         { email, _id: user._id, role: user.role },

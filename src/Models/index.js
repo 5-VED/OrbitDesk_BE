@@ -14,4 +14,6 @@ module.exports.SlaPolicyModel = require('./SlaPolicy.model');
 module.exports.AgentRatingModel = require('./AgentRating.model');
 module.exports.AuditLogModel = require('./AuditLog.model');
 module.exports.SettingsModel = require('./Settings.model');
+module.exports.KnowledgeBaseModel = require('./KnowledgeBase.model');
+module.exports.BusinessHoursModel = require('./BusinessHours.model');
 
