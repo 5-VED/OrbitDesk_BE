@@ -7,6 +7,7 @@ module.exports.UserNotificationModel = require('./UserNotification.model');
 module.exports.NotificationPreferencesModel = require('./NotificationPreferences.model');
 module.exports.AttachmentsModel = require('./Attachments.model');
 module.exports.OrganizationModel = require('./Organization.model');
+
 module.exports.GroupModel = require('./Group.model');
 module.exports.TicketModel = require('./Ticket.model');
 module.exports.TicketCommentModel = require('./TicketComment.model');
@@ -16,4 +17,7 @@ module.exports.AuditLogModel = require('./AuditLog.model');
 module.exports.SettingsModel = require('./Settings.model');
 module.exports.KnowledgeBaseModel = require('./KnowledgeBase.model');
 module.exports.BusinessHoursModel = require('./BusinessHours.model');
-
+module.exports.MacroModel = require('./Macro.model');
+module.exports.CustomerModel = require('./Customer.model');
+module.exports.TriggerModel = require('./Trigger.model');
+module.exports.ConversationModel = require('./Conversation.model');
